@@ -59,14 +59,12 @@ func (cfg *apiConfig) handlerTokenRevoke(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusNotFound, "Couldn't find refresh token", err)
 		return
 	}
-
-	// Sets revoked_at (and updates updated_at) for the matching row in refresh_tokens.
+	
 	_, err = cfg.db.UpdateRefreshToken(r.Context(), tokenString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Internal server error", err)
 		return
 	}
 
-	// Responds with status 204 and no body.
 	w.WriteHeader(http.StatusNoContent)
 }
