@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 	"github.com/google/uuid"
@@ -97,12 +98,24 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 
 func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Request) {
 	s := r.URL.Query().Get("author_id")
-	authorId, err := uuid.Parse(s)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't parse author id", err)
+	
+	var authorId uuid.UUID
+	var err error
+
+	if s != "" {
+		authorId, err = uuid.Parse(s)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't parse author id", err)
+			return
+		}
+	}
+
+	sortOrder := r.URL.Query().Get("sort")
+	if (sortOrder != "asc" && sortOrder != "desc" && sortOrder != "") {
+		respondWithError(w, http.StatusInternalServerError, "Invalid sort parameter value", err)
 		return
 	}
-	
+
 	var dbChirps []database.Chirp
 
 	if authorId == uuid.Nil {
@@ -128,6 +141,10 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 			UserID:    dbChirp.UserID,
 			Body:      dbChirp.Body,
 		})
+	}
+
+	if sortOrder == "desc" {
+		sort.Slice(chirps, func(i, j int) bool { return chirps[i].CreatedAt.After(chirps[j].CreatedAt) })
 	}
 
 	respondWithJSON(w, http.StatusOK, chirps)
